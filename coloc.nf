@@ -25,10 +25,11 @@ Channel.fromPath(params.qtl_ss_tsv)
     .set { eqtl_summ_stats_ch }
 
 process lift_to_GRCh38{
-    tag "${gwas_vcf.simpleName}"
+    tag "${gwas_id}"
     publishDir "${params.outdir}/GRCh38_conv/", mode: 'copy'
     memory '16 GB'
     cpus 2
+    container 'crukcibioinformatics/crossmap'
 
     input:
     tuple val(gwas_id), file(gwas_vcf) from gwas_vcf_ch
@@ -36,13 +37,31 @@ process lift_to_GRCh38{
     file hg38_ref_genome from hg38_ref_genome_ch.collect()
 
     output:
-    tuple val(gwas_id), file("${gwas_vcf.simpleName}.GRCh38.sorted.vcf.gz"), file("${gwas_vcf.simpleName}.GRCh38.sorted.vcf.gz.tbi") into gwas_summstats_GRCh38
+    tuple val(gwas_id), file("${gwas_vcf.simpleName}.GRCh38.vcf") into tabix_index_ch
 
     script:
     """
-    python ${baseDir}/bin/CrossMap.py vcf $gwas_lift_chain $gwas_vcf $hg38_ref_genome ${gwas_vcf.simpleName}.GRCh38.vcf
-    bcftools sort -o ${gwas_vcf.simpleName}.GRCh38.sorted.vcf.gz -O z ${gwas_vcf.simpleName}.GRCh38.vcf
-    tabix -p vcf ${gwas_vcf.simpleName}.GRCh38.sorted.vcf.gz
+    CrossMap.py vcf $gwas_lift_chain $gwas_vcf $hg38_ref_genome ${gwas_vcf.simpleName}.GRCh38.vcf
+    """
+}
+
+process tabix_index_gwas{
+    tag "${gwas_id}"
+    publishDir "${params.outdir}/GRCh38_conv/", mode: 'copy'
+    memory '16 GB'
+    cpus 2
+    container = 'eqtlcatalogue/qtlmap:latest'
+
+    input:
+    tuple val(gwas_id), file(vcf_GRCh38) from tabix_index_ch
+
+    output:
+    tuple val(gwas_id), file("${vcf_GRCh38.simpleName}.GRCh38.sorted.vcf.gz"), file("${vcf_GRCh38.simpleName}.GRCh38.sorted.vcf.gz.tbi") into gwas_summstats_GRCh38
+
+    script:
+    """
+    bcftools sort -o ${vcf_GRCh38.simpleName}.GRCh38.sorted.vcf.gz -O z $vcf_GRCh38
+    tabix -p vcf ${vcf_GRCh38.simpleName}.GRCh38.sorted.vcf.gz
     """
 }
 
@@ -51,6 +70,7 @@ process run_coloc{
     publishDir "${params.outdir}/coloc_results_batch/", mode: 'copy'
     memory '16 GB'
     cpus 2
+    container 'kerimoff/coloc_main:latest'
 
     input:
     each batch_index from 1..params.n_batches
@@ -82,6 +102,7 @@ process merge_coloc_results{
     publishDir "${params.outdir}/coloc_results_merged/", mode: 'copy'
     memory '16 GB'
     cpus 2
+    container 'kerimoff/coloc_main:latest'
 
     input:
     tuple gwas_qtl_subset, file(gwas_qtl_subset_coloc_results_batch_files) from batch_files_merge_coloc_results.groupTuple(sort: true)
