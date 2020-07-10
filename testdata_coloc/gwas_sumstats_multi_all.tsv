@@ -1,0 +1,9 @@
+gwas_id	gwas_vcf
+T2D1-ebi-a-GCST006867	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST006867.vcf.gz
+T2D2-ebi-a-GCST005413	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST005413.vcf.gz
+BIP-ebi-a-GCST003724	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST003724.vcf.gz
+OA1-ebi-a-GCST005814	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST005814.vcf.gz
+OA2-ebi-a-GCST005811	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST005811.vcf.gz
+HEIGHT-ukb-a-389	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ukb-a-389.vcf.gz
+BMI-ukb-a-248	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ukb-a-248.vcf.gz
+

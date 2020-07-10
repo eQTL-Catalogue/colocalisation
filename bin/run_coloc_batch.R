@@ -184,6 +184,10 @@ coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl
   }
   
   gwas_stats = gwasvcf::query_gwas(gwas_ss, chrompos = paste0(var_chrom, ":", max(0, var_pos - coloc_window), "-", var_pos + coloc_window))
+  # return empty dataframe if there is no any variants in the given region of GWAS SS
+  if(nrow(gwas_stats) == 0){
+    return(data.frame())
+  }
   gwas_stats = gwasvcf::vcf_to_granges(gwas_stats) %>% 
     keepSeqlevels(var_chrom)
   
@@ -196,6 +200,11 @@ coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl
     dplyr::mutate(row_count = n()) %>% 
     dplyr::ungroup() %>% 
     dplyr::filter(row_count == 1) 
+
+  # return an empty dataframe if GWAS and QTL SummStats does not share any variant.
+  if (sum(gwas_stats$id %in% eqtl_ss_df$id) == 0) {
+    return(data.frame())
+  }
   
   results = run_coloc(eqtl_ss_df, gwas_stats)
   results = results %>% mutate(variant = var_id, 

@@ -27,8 +27,6 @@ Channel.fromPath(params.qtl_ss_tsv)
 process lift_to_GRCh38{
     tag "${gwas_id}"
     publishDir "${params.outdir}/GRCh38_conv/", mode: 'copy'
-    memory '16 GB'
-    cpus 2
     container 'crukcibioinformatics/crossmap'
 
     input:
@@ -48,8 +46,6 @@ process lift_to_GRCh38{
 process tabix_index_gwas{
     tag "${gwas_id}"
     publishDir "${params.outdir}/GRCh38_conv/", mode: 'copy'
-    memory '16 GB'
-    cpus 2
     container = 'eqtlcatalogue/qtlmap:latest'
 
     input:
@@ -67,20 +63,16 @@ process tabix_index_gwas{
 
 process run_coloc{
     tag "${gwas_id}_${qtl_subset}"
-    publishDir "${params.outdir}/coloc_results_batch/", mode: 'copy'
-    memory '16 GB'
-    cpus 2
+    // publishDir "${params.outdir}/coloc_results_batch/", mode: 'copy'
     container 'kerimoff/coloc_main:latest'
 
     input:
     each batch_index from 1..params.n_batches
-    // replace with combine or other operator
     tuple val(qtl_subset), file(eqtl_ss), file(eqtl_ss_index), val(gwas_id), file(gwas_sumstats), file(gwas_sumstats_index) from eqtl_summ_stats_ch.combine(gwas_summstats_GRCh38)
-    // tuple val(gwas_id), file(gwas_sumstats), file(gwas_sumstats_index) from gwas_summstats_GRCh38
     file lead_pairs from gene_variant_list_ch.collect()
 
     output:
-    set val("${gwas_id}_${qtl_subset}"), file("${gwas_id}_${qtl_subset}_${batch_index}_${params.n_batches}.tsv") into batch_files_merge_coloc_results
+    set val(gwas_id), val("${gwas_id}_${qtl_subset}"), file("${gwas_id}_${qtl_subset}_${batch_index}_${params.n_batches}.tsv") into batch_files_merge_coloc_results
 
     script:
     """
@@ -99,16 +91,14 @@ process run_coloc{
 }
 
 process merge_coloc_results{
-    publishDir "${params.outdir}/coloc_results_merged/", mode: 'copy'
-    memory '16 GB'
-    cpus 2
+    publishDir "${params.outdir}/coloc_results_merged/${gwas_id}", mode: 'copy'
     container 'kerimoff/coloc_main:latest'
 
     input:
-    tuple gwas_qtl_subset, file(gwas_qtl_subset_coloc_results_batch_files) from batch_files_merge_coloc_results.groupTuple(sort: true)
+    tuple gwas_id, gwas_qtl_subset, file(gwas_qtl_subset_coloc_results_batch_files) from batch_files_merge_coloc_results.groupTuple(sort: true)
 
     output:
-    tuple gwas_qtl_subset, file("${gwas_qtl_subset}.txt.gz") into coloc_results_merged_ch
+    tuple gwas_qtl_subset, file("${gwas_qtl_subset}.txt.gz")
 
     script:
     """
