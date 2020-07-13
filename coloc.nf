@@ -95,7 +95,7 @@ process merge_coloc_results{
     container 'kerimoff/coloc_main:latest'
 
     input:
-    tuple gwas_id, gwas_qtl_subset, file(gwas_qtl_subset_coloc_results_batch_files) from batch_files_merge_coloc_results.groupTuple(sort: true)
+    tuple gwas_id, gwas_qtl_subset, file(gwas_qtl_subset_coloc_results_batch_files) from batch_files_merge_coloc_results.groupTuple(by: [1, 0], sort: true)
 
     output:
     tuple gwas_qtl_subset, file("${gwas_qtl_subset}.txt.gz")
