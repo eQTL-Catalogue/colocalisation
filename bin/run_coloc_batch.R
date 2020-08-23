@@ -116,12 +116,14 @@ import_eQTLCatalogue <- function(ftp_path, region, selected_molecular_trait_id, 
   
   #Remove rsid duplicates and multi-allelic variant
   summary_stats = dplyr::select(summary_stats, -rsid) %>% 
-    dplyr::distinct() %>% #rsid duplicates
+    base::unique() %>% #rsid duplicates
     dplyr::mutate(id = paste(chromosome, position, sep = ":")) %>% 
     dplyr::group_by(id) %>% 
     dplyr::mutate(row_count = n()) %>% dplyr::ungroup() %>% 
-    dplyr::filter(row_count == 1) #Multialllics
-  
+    dplyr::filter(row_count == 1) %>% #Multialllics
+    dplyr::filter(!is.nan(se)) %>% # remove variants with unknown SE
+    dplyr::filter(!is.na(se))
+
   return(summary_stats)
 }
 
@@ -157,7 +159,7 @@ splitIntoChunks <- function(chunk_number, n_chunks, n_total){
   return(selected_batch)
 }
 
-col_names_eqtl <- c("molecular_trait_id","chromosome","position","ref","alt","variant","ma_samples","ac","an","maf","pvalue","beta","se","molecular_trait_object_id","gene_id","median_tpm","r2","type","rsid")
+col_names_eqtl <- c("variant","r2","pvalue","molecular_trait_object_id","molecular_trait_id","maf","gene_id","median_tpm","beta","se","an","ac","chromosome","position","ref","alt","type","rsid")
 
 # Define a function which performs coloc between variant and phenotype in given window around the variant position
 #' @param pair One row of dataframe with [molecular_trait_id,variant,chromosome,position] columns
@@ -235,18 +237,21 @@ coloc_results <- do.call("rbind", apply(selected_pairs, 1, coloc_in_region,
                                         gwas_id = gwas_id,
                                         qtl_subset = qtl_subset))
 
-# If there are colocalisation results then write it into the file
+if (!dir.exists(outdir)) dir.create(outdir)
+
+if (!is.null(output_prefix)) {
+  file_name = file.path(outdir, output_prefix)
+} else {
+  file_name = file.path(outdir, paste(gwas_id, qtl_subset, chunk_id, n_chunks, sep = "_")) %>% paste0(".tsv")
+}
+
+# If there are colocalisation results then write it into the file, if not create an empty file
 if(!is.na(coloc_results) && nrow(coloc_results) > 0){
-  if (!dir.exists(outdir)) dir.create(outdir)
-  if (!is.null(output_prefix)) {
-    file_name = file.path(outdir, output_prefix)
-  } else {
-    file_name = file.path(outdir, paste(gwas_id, qtl_subset, chunk_id, n_chunks, sep = "_")) %>% paste0(".tsv")
-  }
   message(" ## write colocalisation results to ", file_name )
   coloc_results = coloc_results %>% select(c("gwas_id", "qtl_subset", "variant", "molecular_trait_id", "chromosome", "position"), everything())
   utils::write.table(coloc_results, file = file_name, quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
 } else {
+  file.create(file_name)
   message("Coloc results are empty or null!")
 }
 
