@@ -33,14 +33,14 @@ opt <- optparse::parse_args(OptionParser(option_list=option_list))
 #Deubgging
 if(FALSE){
   opt = list(
-    gwas_sumstats = "ebi-a-GCST004599.GRCh38.sorted.vcf.gz",
-    gwas_id = "gwas_id",
-    qtl_sumstats = "Alasoo_2018.macrophage_naive_ge.nominal.sorted.tsv.gz",
-    qtl_subset ="qtl_subset",
-    lead_pairs = "lead_pairs_rnaseq.tsv",
+    gwas_sumstats = "data/temp_coloc_example_data/ebi-a-GCST002318-af.GRCh38.sorted.vcf.gz",
+    gwas_id = "ebi-a-GCST002318",
+    qtl_sumstats = "data/temp_coloc_example_data/Alasoo_2018.macrophage_naive_ge.nominal.sorted.tsv.gz",
+    qtl_subset ="Alasoo_2018.macrophage_naive_ge",
+    lead_pairs = "data/temp_coloc_example_data/lead_pairs_rnaseq_3.tsv",
     window_coloc = 200000,
-    chunk = "1 100",
-    output_prefix = "ebi-a-GCST004599_Alasoo_2018.macrophage_naive_ge_1_100.tsv",
+    chunk = "1 1000",
+    output_prefix = "ebi-a-GCST002318_Alasoo_2018.macrophage_naive_ge_1_1000.tsv",
     outdir = "./coloc_results/")
 }
 
@@ -107,7 +107,7 @@ import_eQTLCatalogue <- function(ftp_path, region, selected_molecular_trait_id, 
   }
   
   #Fetch summary statistics with Rsamtools
-  summary_stats = scanTabixDataFrame(ftp_path, region, col_names = column_names)[[1]] 
+  summary_stats = scanTabixDataFrame(tabix_file = ftp_path, region, col_names = column_names)[[1]] 
   if (is.null(summary_stats)) {
     return(NULL)
   }
@@ -159,7 +159,7 @@ splitIntoChunks <- function(chunk_number, n_chunks, n_total){
   return(selected_batch)
 }
 
-col_names_eqtl <- c("variant","r2","pvalue","molecular_trait_object_id","molecular_trait_id","maf","gene_id","median_tpm","beta","se","an","ac","chromosome","position","ref","alt","type","rsid")
+col_names_eqtl <- c("molecular_trait_id","chromosome","position","ref","alt","variant","ma_samples","ac","an","maf","pvalue","beta","se","molecular_trait_object_id","gene_id","median_tpm","r2","type","rsid")
 
 # Define a function which performs coloc between variant and phenotype in given window around the variant position
 #' @param pair One row of dataframe with [molecular_trait_id,variant,chromosome,position] columns
@@ -180,7 +180,10 @@ coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl
     ranges = IRanges::IRanges(start = max(0, var_pos - coloc_window), end = var_pos + coloc_window), 
     strand = "*")
   
-  eqtl_ss_df <- import_eQTLCatalogue(eqtl_ss, region_granges, selected_molecular_trait_id = molecular_trait_id, col_names_eqtl)
+  eqtl_ss_df <- import_eQTLCatalogue(ftp_path = eqtl_ss, 
+                                     region =  region_granges, 
+                                     selected_molecular_trait_id = molecular_trait_id, 
+                                     column_names = col_names_eqtl)
   if (is.null(eqtl_ss_df) || nrow(eqtl_ss_df) == 0) {
     return(data.frame())
   }
@@ -254,28 +257,3 @@ if(!is.na(coloc_results) && nrow(coloc_results) > 0){
   file.create(file_name)
   message("Coloc results are empty or null!")
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
