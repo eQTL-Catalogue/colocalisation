@@ -45,6 +45,7 @@ process lift_to_GRCh38{
 
 process tabix_index_gwas{
     tag "${gwas_id}"
+    storeDir "${baseDir}/GWAS_GRCh38_conv_cache"
     publishDir "${params.outdir}/GRCh38_conv/", mode: 'copy'
     container = 'eqtlcatalogue/qtlmap:latest'
 
