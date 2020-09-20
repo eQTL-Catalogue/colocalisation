@@ -14,15 +14,15 @@ Channel.fromPath(params.hg38_ref_genome)
     .ifEmpty { error "Cannot find gwas_vcf: ${params.hg38_ref_genome}" }
     .set { hg38_ref_genome_ch }
 
-Channel.fromPath(params.gene_variant_list)
-    .ifEmpty { error "Cannot find gene_variant_list: ${params.gene_variant_list}" }
-    .set { gene_variant_list_ch }
+// Channel.fromPath(params.gene_variant_list)
+//     .ifEmpty { error "Cannot find gene_variant_list: ${params.gene_variant_list}" }
+//     .set { gene_variant_list_ch }
 
 Channel.fromPath(params.qtl_ss_tsv)
     .ifEmpty { error "Cannot find gene_variant_list: ${params.eqtl_summ_stats_path}" }
     .splitCsv(header: true, sep: '\t', strip: true)
-    .map{row -> [ row.qtl_subset, file(row.qtl_ss), file(row.qtl_ss_index)]}
-    .set { eqtl_summ_stats_ch }
+    .map{row -> [ row.qtl_subset, file(row.qtl_ss), file(row.qtl_ss_index), file(row.qtl_perm)]}
+    .set { extract_lead_var_pairs_ch }
 
 process lift_to_GRCh38{
     tag "${gwas_id}"
@@ -62,6 +62,32 @@ process tabix_index_gwas{
     """
 }
 
+process extract_lead_var_pairs{
+    tag "${gwas_id}"
+    publishDir "${params.outdir}/leadpairs/", mode: 'copy', pattern: "*.leadpairs.tsv"
+    container = 'kerimoff/coloc_main:latest'
+
+    input:
+    tuple val(qtl_subset), file(eqtl_ss), file(eqtl_ss_index), file(perm_res) from extract_lead_var_pairs_ch
+
+    output:
+    tuple val(qtl_subset), file(eqtl_ss), file(eqtl_ss_index), file("${qtl_subset}.leadpairs.tsv") into eqtl_summ_stats_ch
+
+    script:
+    """
+    #!/usr/bin/env Rscript
+    library(dplyr)
+
+    permutation_df <-readr::read_tsv('$perm_res', trim_ws = TRUE)
+  
+    permutation_df <- permutation_df %>% 
+        mutate(FDR = p.adjust(p = p_beta, method = 'fdr')) %>% 
+        filter(FDR < 0.01)
+    
+    readr::write_tsv(permutation_df %>% select(molecular_trait_id, variant, chromosome, position), '${qtl_subset}.leadpairs.tsv')
+    """
+}
+
 process run_coloc{
     tag "${gwas_id}_${qtl_subset}"
     // publishDir "${params.outdir}/coloc_results_batch/", mode: 'copy'
@@ -69,8 +95,8 @@ process run_coloc{
 
     input:
     each batch_index from 1..params.n_batches
-    tuple val(qtl_subset), file(eqtl_ss), file(eqtl_ss_index), val(gwas_id), file(gwas_sumstats), file(gwas_sumstats_index) from eqtl_summ_stats_ch.combine(gwas_summstats_GRCh38)
-    file lead_pairs from gene_variant_list_ch.collect()
+    tuple val(qtl_subset), file(eqtl_ss), file(eqtl_ss_index), file(lead_pairs), val(gwas_id), file(gwas_sumstats), file(gwas_sumstats_index) from eqtl_summ_stats_ch.combine(gwas_summstats_GRCh38)
+    // file lead_pairs from gene_variant_list_ch.collect()
 
     output:
     set val(gwas_id), val("${gwas_id}_${qtl_subset}"), file("${gwas_id}_${qtl_subset}_${batch_index}_${params.n_batches}.tsv") into batch_files_merge_coloc_results

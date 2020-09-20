@@ -33,14 +33,14 @@ opt <- optparse::parse_args(OptionParser(option_list=option_list))
 #Deubgging
 if(FALSE){
   opt = list(
-    gwas_sumstats = "data/temp_coloc_example_data/ebi-a-GCST002318-af.GRCh38.sorted.vcf.gz",
-    gwas_id = "ebi-a-GCST002318",
-    qtl_sumstats = "data/temp_coloc_example_data/Alasoo_2018.macrophage_naive_ge.nominal.sorted.tsv.gz",
-    qtl_subset ="Alasoo_2018.macrophage_naive_ge",
-    lead_pairs = "data/temp_coloc_example_data/lead_pairs_rnaseq_3.tsv",
+    gwas_sumstats = "ebi-a-GCST004133-af.GRCh38.sorted.vcf.gz",
+    gwas_id = "ebi-a-GCST004133",
+    qtl_sumstats = "Alasoo_2018.macrophage_naive_txrev.nominal.sorted.tsv.gz",
+    qtl_subset ="Alasoo_2018.macrophage_naive_txrev",
+    lead_pairs = "Alasoo_2018.macrophage_naive_txrev.leadpairs.tsv",
     window_coloc = 200000,
-    chunk = "1 1000",
-    output_prefix = "ebi-a-GCST002318_Alasoo_2018.macrophage_naive_ge_1_1000.tsv",
+    chunk = "4 10",
+    output_prefix = "ebi-a-GCST002318_Alasoo_2018.macrophage_naive_tx_4_10.tsv",
     outdir = "./coloc_results/")
 }
 
@@ -77,15 +77,15 @@ message("output_file_path: ", outdir)
 #' @export
 scanTabixDataFrame <- function(tabix_file, param, ...){
   tabix_list = Rsamtools::scanTabix(tabix_file, param = param)
-  df_list = lapply(tabix_list, function(x,...){
+  df_list = lapply(tabix_list, function(x, ...){
     if(length(x) > 0){
       if(length(x) == 1){
         #Hack to make sure that it also works for data frames with only one row
         #Adds an empty row and then removes it
-        result = paste(paste(x, collapse = "\n"),"\n",sep = "")
+        result = stringr::str_c(stringr::str_c(x, collapse = "\n"), collapse = "\n")
         result = readr::read_delim(result, delim = "\t", ...)[1,]
       }else{
-        result = paste(x, collapse = "\n")
+        result = stringr::str_c(x, collapse = "\n")
         result = readr::read_delim(result, delim = "\t", ...)
       }
     } else{
@@ -101,13 +101,22 @@ scanTabixDataFrame <- function(tabix_file, param, ...){
 # Thus, we first want to retain only one unique record per variant. 
 # To simplify colocalisation analysis, we also want to exclude multi-allelic variants. 
 # The following function imports summary statistics from a tabix-index TSV file and performs necessary filtering.
-import_eQTLCatalogue <- function(ftp_path, region, selected_molecular_trait_id, column_names, verbose = TRUE){
+import_eQTLCatalogue <- function(ftp_path, region, selected_molecular_trait_id, column_names, column_types, verbose = TRUE){
   if(verbose){
     print(ftp_path)
   }
   
   #Fetch summary statistics with Rsamtools
-  summary_stats = scanTabixDataFrame(tabix_file = ftp_path, region, col_names = column_names)[[1]] 
+  # This has been commented out because this method can not allocate memory with over 10M records
+  # summary_stats = scanTabixDataFrame(tabix_file = ftp_path, param = region, col_names = column_names, col_types = column_types)[[1]] 
+
+  tabix_list = Rsamtools::scanTabix(ftp_path, param = region)
+  summary_stats <- Map(function(elt) {
+    utils::read.csv(textConnection(elt), sep="\t", col.names = col_names_eqtl)
+  }, tabix_list)
+  
+  summary_stats <- summary_stats[[1]] %>% as.data.frame()
+  
   if (is.null(summary_stats)) {
     return(NULL)
   }
@@ -122,7 +131,8 @@ import_eQTLCatalogue <- function(ftp_path, region, selected_molecular_trait_id, 
     dplyr::mutate(row_count = n()) %>% dplyr::ungroup() %>% 
     dplyr::filter(row_count == 1) %>% #Multialllics
     dplyr::filter(!is.nan(se)) %>% # remove variants with unknown SE
-    dplyr::filter(!is.na(se))
+    dplyr::filter(!is.na(se)) %>% 
+    dplyr::select(-row_count) # remove added row_count columns
 
   return(summary_stats)
 }
@@ -160,7 +170,7 @@ splitIntoChunks <- function(chunk_number, n_chunks, n_total){
 }
 
 col_names_eqtl <- c("molecular_trait_id","chromosome","position","ref","alt","variant","ma_samples","ac","an","maf","pvalue","beta","se","molecular_trait_object_id","gene_id","median_tpm","r2","type","rsid")
-
+col_types_eqtl <- "ccdcccnnnddddccddcc"
 # Define a function which performs coloc between variant and phenotype in given window around the variant position
 #' @param pair One row of dataframe with [molecular_trait_id,variant,chromosome,position] columns
 #' @param gwas_ss GWAS vcf file. Should have a tabix index file in the same path
@@ -169,7 +179,7 @@ col_names_eqtl <- c("molecular_trait_id","chromosome","position","ref","alt","va
 #'
 #' @return one row of tibble which will be rbinded after apply function finishes the process.
 #' @export
-coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl, gwas_id, qtl_subset){
+coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl, col_types_eqtl, gwas_id, qtl_subset){
   print(pair)
   var_id = as.character(pair["variant"]) %>% trimws()
   var_pos = as.numeric(pair["position"])
@@ -183,7 +193,8 @@ coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl
   eqtl_ss_df <- import_eQTLCatalogue(ftp_path = eqtl_ss, 
                                      region =  region_granges, 
                                      selected_molecular_trait_id = molecular_trait_id, 
-                                     column_names = col_names_eqtl)
+                                     column_names = col_names_eqtl,
+                                     column_types = col_types_eqtl)
   if (is.null(eqtl_ss_df) || nrow(eqtl_ss_df) == 0) {
     return(data.frame())
   }
@@ -236,7 +247,8 @@ coloc_results <- do.call("rbind", apply(selected_pairs, 1, coloc_in_region,
                                         gwas_ss = gwas_sumstats, 
                                         eqtl_ss = qtl_sumstats, 
                                         coloc_window = coloc_window, 
-                                        col_names_eqtl=col_names_eqtl,
+                                        col_names_eqtl = col_names_eqtl,
+                                        col_types_eqtl = col_types_eqtl,
                                         gwas_id = gwas_id,
                                         qtl_subset = qtl_subset))
 

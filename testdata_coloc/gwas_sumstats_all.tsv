@@ -1,0 +1,16 @@
+gwas_id	gwas_vcf
+T2D1-ebi-a-GCST006867	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST006867.vcf.gz
+HEIGHT-ukb-a-389	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ukb-a-389.vcf.gz
+BMI-ukb-a-248	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ukb-a-248.vcf.gz
+MPV-ebi-a-GCST004599	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST004599.vcf.gz
+IBD-ebi-a-GCST004131	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST004131-af.vcf.gz
+CD-ebi-a-GCST004132	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST004132-af.vcf.gz
+UC-ebi-a-GCST004133	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST004133-af.vcf.gz
+RA-ieu-a-833	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ieu-a-833-af.vcf.gz
+RA-ebi-a-GCST002318	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST002318-af.vcf.gz
+SLE-ebi-a-GCST003156	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST003156-af.vcf.gz
+PLT-ebi-a-GCST004603	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST004603.vcf.gz
+CAD-ebi-a-GCST003116	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST003116.vcf.gz
+MC-ebi-a-GCST004625	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST004625.vcf.gz
+LC-ebi-a-GCST004627	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ebi-a-GCST004627.vcf.gz
+HPT-ukb-a-531	/gpfs/hpc/home/kerimov/qtlmap/gwas_data/ukb-a-531.vcf.gz
