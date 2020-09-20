@@ -26,6 +26,7 @@ Channel.fromPath(params.qtl_ss_tsv)
 
 process lift_to_GRCh38{
     tag "${gwas_id}"
+    storeDir "/gpfs/hpc/projects/eQTLCatalogue/coloc/GRCh38_conv_GWAS_15Sept2020"
     publishDir "${params.outdir}/GRCh38_conv/", mode: 'copy'
     container 'crukcibioinformatics/crossmap'
 
@@ -45,7 +46,7 @@ process lift_to_GRCh38{
 
 process tabix_index_gwas{
     tag "${gwas_id}"
-    storeDir "${baseDir}/GWAS_GRCh38_conv_cache"
+    storeDir "/gpfs/hpc/projects/eQTLCatalogue/coloc/GRCh38_conv_GWAS_15Sept2020"
     publishDir "${params.outdir}/GRCh38_conv/", mode: 'copy'
     container = 'eqtlcatalogue/qtlmap:latest'
 
