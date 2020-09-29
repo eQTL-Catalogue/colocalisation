@@ -1,40 +1,48 @@
 # kerimoff/qtlmap
-**This pipeline maps "Quantitive Trait Loci"-s in reproducible, portable and uniform manner**
-
-[![Nextflow](https://img.shields.io/badge/nextflow-%E2%89%A50.32.0-brightgreen.svg)](https://www.nextflow.io/)
-[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg)](http://bioconda.github.io/)
-[![Docker](https://img.shields.io/docker/automated/kerimoff/qtlmap.svg)](https://hub.docker.com/r/kerimoff/qtlmap)
-[![https://www.singularity-hub.org/static/img/hosted-singularity--hub-%23e32929.svg](https://www.singularity-hub.org/static/img/hosted-singularity--hub-%23e32929.svg)](https://singularity-hub.org/collections/2842)
-
-### Introduction
-
-**kerimoff/qtlmap** is a bioinformatics analysis pipeline used for QTL Analysis.
-
-The workflow takes phenotype count matrix (normalized and quality controlled) and genotype data as input, and finds associations between them with the help of sample metadata and phenotype metadata files (See [Input formats and preparation](docs/inputs_expl.md) for required input file details). To map QTLs, pipeline uses [QTLTools's](https://qtltools.github.io/qtltools/) PCA and RUN methods. For manipulation of files [BcfTools](https://samtools.github.io/bcftools/bcftools.html), [Tabix](http://www.htslib.org/doc/tabix.html) and custom [Rscript](https://www.rdocumentation.org/packages/utils/versions/3.5.3/topics/Rscript) scripts are used.
-
-The pipeline is built using [Nextflow](https://www.nextflow.io), a bioinformatics workflow tool to run tasks across multiple compute infrastructures in a very portable manner. It comes with docker / singularity containers making installation trivial and results highly reproducible.
+**This pipeline runs colocalisation analysis using summary statistics from eQTLCatalogue (or any summary statistics in the same format) and GWASs in VCF format (see https://gwas.mrcieu.ac.uk/datasets/).**
 
 
-### Documentation
-The kerimoff/qtlmap pipeline comes with documentation about the pipeline, found in the `docs/` directory:
+### To run in University of Tartu HPC
 
-1. [Installation](docs/installation.md)
-2. Pipeline configuration
-    * [Local installation](docs/configuration/local.md)
-    * [Adding your own system](docs/configuration/adding_your_own.md)
-3. [Input formats and preparation](docs/inputs_expl.md)
-4. [Running the pipeline](docs/usage.md)
-5. [Troubleshooting](docs/troubleshooting.md)
+1. Clone the repo
+```
+git clone https://github.com/eQTL-Catalogue/colocalisation.git
+```
 
-<!-- TODO nf-core: Add a brief overview of what the pipeline does and how it works -->
+2. Go to [nextflow.config](https://github.com/eQTL-Catalogue/colocalisation/blob/master/nextflow.config) and set the parameters as you need
+   
+  - _gwas_ss_tsv = "${baseDir}/testdata_coloc/gwas_sumstats_all.tsv"_<br /> // path to the GWASs summary stats files. [see example here](https://github.com/eQTL-Catalogue/colocalisation/blob/master/testdata_coloc/gwas_sumstats_test.tsv)<br />  
+  - _qtl_ss_tsv = "${baseDir}/testdata_coloc/eqtl_sumstats_tx.tsv"_<br />  // path to the QTL summary statistics [see example here](https://github.com/eQTL-Catalogue/colocalisation/blob/master/testdata_coloc/eqtl_sumstats_test_perm.tsv)<br />  
+  - _gwas_lift_chain = "/gpfs/hpc/projects/eQTLCatalogue/GRCh37_to_GRCh38/GRCh37_to_GRCh38.chain.gz"_<br />  // This is a chain file to lift up the version of GWAS variants from HG19 to HG38. Don't change it if you don't know what you are doing.<br />
+  - _hg38_ref_genome = "/gpfs/hpc/projects/genomic_references/annotations/hg38/hg38.fa"_<br />  // This is a reference genome. Don't change it if you don't know what you are doing.
+  - _outdir = './results_coloc_tx'_<br />  // Output directory of the pipeline. The results will be here
+  - _use_permutation = false_<br />  // A flag to inform pipeline if you are using lead_var_pairs (credible sets) to do colocalisation in specific pairs of molecular_trait_id and variant_id. If **true** the 4th column of **qtl_ss_tsv** should be permutation run result file of the qtl_subset. If **false** the same column should be the lead_var_pairs file [see example](https://github.com/eQTL-Catalogue/colocalisation/blob/master/testdata_coloc/lead_pairs_rnaseq_2.tsv)
+  - _cis_window = 200000_<br />  // cis window where you wanna perform colocalisation. defaults is +-200000 basepairs
+  - _n_batches = 10_<br />  // Number of batches needed to split the lead_var_pairs file in processing. I.E. [] has 42445 pairs in it. so if **n_batches**=10 in each job pipeline will process 4245 pairs.
 
-### Pipeline Description
-Mapping QTLs is a process of finding statistically significant associations between phenotypes and genetic variants located nearby (within a specific window around phenotype, a.k.a cis window)
-This pipeline is designed to perform QTL mapping. It is intended to add this pipeline to the nf-core framework in the future.
-High level representation of the pipeline is shown below:
+3. start a screen session
+```
+screen -S coloc_nf
+```
+4. ssh to stage1
+```
+ssh stage1
+```
+5. load the needed modules
+```
+module load java-1.8.0_40
+module load singularity/3.5.3
+module load nextflow
+```
+6. Change directory to where you cloned the repo
+```
+cd colocalisation/
+```
 
-![High_level_schema](docs/images/QTLMap_pipeline_high_level_repr.png)
-
+7. run the pipeline
+```
+nextflow run main.nf -profile tartu_hpc
+```
 
 ### Credits
-kerimoff/qtlmap was originally written by Nurlan Kerimov under supervision of [Kaur Alasoo](https://github.com/kauralasoo)
+[eQTL-Catalogue/colocalisation](https://github.com/eQTL-Catalogue/colocalisation) was originally written by [Nurlan Kerimov](https://github.com/kerimoff) under supervision of [Kaur Alasoo](https://github.com/kauralasoo)
