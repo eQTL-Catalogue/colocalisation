@@ -73,30 +73,32 @@ process tabix_index_gwas{
     """
 }
 
-process extract_lead_var_pairs{
-    tag "${gwas_id}"
-    publishDir "${params.outdir}/leadpairs/", mode: 'copy', pattern: "*.leadpairs.tsv"
-    container = 'kerimoff/coloc_main:latest'
+if (params.use_permutation) {
+    process extract_lead_var_pairs{
+        tag "${gwas_id}"
+        publishDir "${params.outdir}/leadpairs/", mode: 'copy', pattern: "*.leadpairs.tsv"
+        container = 'kerimoff/coloc_main:latest'
 
-    input:
-    tuple val(qtl_subset), file(eqtl_ss), file(eqtl_ss_index), file(perm_res) from extract_lead_var_pairs_ch
+        input:
+        tuple val(qtl_subset), file(eqtl_ss), file(eqtl_ss_index), file(perm_res) from extract_lead_var_pairs_ch
 
-    output:
-    tuple val(qtl_subset), file(eqtl_ss), file(eqtl_ss_index), file("${qtl_subset}.leadpairs.tsv") into eqtl_summ_stats_ch
+        output:
+        tuple val(qtl_subset), file(eqtl_ss), file(eqtl_ss_index), file("${qtl_subset}.leadpairs.tsv") into eqtl_summ_stats_ch
 
-    script:
-    """
-    #!/usr/bin/env Rscript
-    library(dplyr)
+        script:
+        """
+        #!/usr/bin/env Rscript
+        library(dplyr)
 
-    permutation_df <-readr::read_tsv('$perm_res', trim_ws = TRUE)
-  
-    permutation_df <- permutation_df %>% 
-        mutate(FDR = p.adjust(p = p_beta, method = 'fdr')) %>% 
-        filter(FDR < 0.01)
+        permutation_df <-readr::read_tsv('$perm_res', trim_ws = TRUE)
     
-    readr::write_tsv(permutation_df %>% select(molecular_trait_id, variant, chromosome, position), '${qtl_subset}.leadpairs.tsv')
-    """
+        permutation_df <- permutation_df %>% 
+            mutate(FDR = p.adjust(p = p_beta, method = 'fdr')) %>% 
+            filter(FDR < 0.01)
+        
+        readr::write_tsv(permutation_df %>% select(molecular_trait_id, variant, chromosome, position), '${qtl_subset}.leadpairs.tsv')
+        """
+    }
 }
 
 process run_coloc{
