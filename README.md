@@ -1,5 +1,5 @@
-# kerimoff/qtlmap
-**This pipeline runs colocalisation analysis using summary statistics from eQTLCatalogue (or any summary statistics in the same format) and GWASs in VCF format (see https://gwas.mrcieu.ac.uk/datasets/).**
+# eQTL-Catalogue/colocalisation
+**This pipeline runs colocalisation analysis using summary statistics from the eQTL Catalogue (or any summary statistics in the same format) and GWAS summary statistics in VCF format downloaded from the [MRC OpenGWAS database](https://gwas.mrcieu.ac.uk/datasets/).**
 
 
 ### To run in University of Tartu HPC
