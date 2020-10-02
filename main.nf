@@ -36,7 +36,7 @@ if(params.use_permutation){
 
 process lift_to_GRCh38{
     tag "${gwas_id}"
-    storeDir "/gpfs/hpc/projects/eQTLCatalogue/coloc/GRCh38_conv_GWAS_15Sept2020"
+    //storeDir "/gpfs/hpc/projects/eQTLCatalogue/coloc/GRCh38_conv_GWAS_15Sept2020"
     publishDir "${params.outdir}/GRCh38_conv/", mode: 'copy'
     container 'crukcibioinformatics/crossmap'
 
