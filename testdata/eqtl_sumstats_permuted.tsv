@@ -1,0 +1,2 @@
+qtl_subset	qtl_ss	qtl_ss_index	qtl_credible_set_or_perm
+BLUEPRINT_PE.T-cell_ge	testdata/BLUEPRINT_PE.T-cell_ge.nominal.sorted.tsv.gz	testdata/BLUEPRINT_PE.T-cell_ge.nominal.sorted.tsv.gz.tbi	testdata/BLUEPRINT_PE.T-cell_ge.permuted.txt.gz
