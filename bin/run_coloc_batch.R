@@ -1,10 +1,11 @@
-message(" ## Loading libraries: dplyr, readr, coloc, GenomicRanges, Rsamtools, optparse")
+message(" ## Loading libraries: dplyr, readr, coloc, GenomicRanges, Rsamtools, optparse, gwasvcf")
 suppressPackageStartupMessages(library("dplyr"))
 suppressPackageStartupMessages(library("readr"))
 suppressPackageStartupMessages(library("coloc"))
 suppressPackageStartupMessages(library("GenomicRanges"))
 suppressPackageStartupMessages(library("Rsamtools"))
 suppressPackageStartupMessages(library("optparse"))
+suppressPackageStartupMessages(library("gwasvcf"))
 
 #Parse command-line options
 option_list <- list(
