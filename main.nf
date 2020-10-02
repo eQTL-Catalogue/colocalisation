@@ -75,7 +75,7 @@ process tabix_index_gwas{
 
 if (params.use_permutation) {
     process extract_lead_var_pairs{
-        tag "${gwas_id}"
+        tag "${qtl_subset}"
         publishDir "${params.outdir}/leadpairs/", mode: 'copy', pattern: "*.leadpairs.tsv"
         container = 'kerimoff/coloc_main:latest'
 
@@ -112,7 +112,7 @@ process run_coloc{
     // file lead_pairs from gene_variant_list_ch.collect()
 
     output:
-    set val(gwas_id), val("${gwas_id}_${qtl_subset}"), file("${gwas_id}_${qtl_subset}_${batch_index}_${params.n_batches}.tsv") into batch_files_merge_coloc_results
+    tuple val(gwas_id), val("${gwas_id}_${qtl_subset}"), file("${gwas_id}_${qtl_subset}_${batch_index}_${params.n_batches}.tsv") into batch_files_merge_coloc_results
 
     script:
     """
