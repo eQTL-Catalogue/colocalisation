@@ -66,51 +66,16 @@ message("chunk: ", chunk)
 message("output_prefix: ", output_prefix)
 message("output_file_path: ", outdir)
 
-# Define a small helper function to quickly read regions from tabix-indexed summary statistics files into R.
-#' A general function to quickly import tabix indexed tab-separated files into data_frame
-#'
-#' @param tabix_file Path to tabix-indexed text file
-#' @param param An instance of GRanges, RangedData, or RangesList
-#' provide the sequence names and regions to be parsed. Passed onto Rsamtools::scanTabix()
-#' @param ... Additional parameters to be passed on to readr::read_delim()
-#'
-#' @return List of data_frames, one for each entry in the param GRanges object.
-#' @export
-scanTabixDataFrame <- function(tabix_file, param, ...){
-  tabix_list = Rsamtools::scanTabix(tabix_file, param = param)
-  df_list = lapply(tabix_list, function(x, ...){
-    if(length(x) > 0){
-      if(length(x) == 1){
-        #Hack to make sure that it also works for data frames with only one row
-        #Adds an empty row and then removes it
-        result = stringr::str_c(stringr::str_c(x, collapse = "\n"), collapse = "\n")
-        result = readr::read_delim(result, delim = "\t", ...)[1,]
-      }else{
-        result = stringr::str_c(x, collapse = "\n")
-        result = readr::read_delim(result, delim = "\t", ...)
-      }
-    } else{
-      #Return NULL if the nothing is returned from tabix file
-      result = NULL
-    }
-    return(result)
-  }, ...)
-  return(df_list)
-}
-
 # In eQTL Catalogue, **variants with multiple rsids are split over multiple rows** in the summary statistics files. 
 # Thus, we first want to retain only one unique record per variant. 
 # To simplify colocalisation analysis, we also want to exclude multi-allelic variants. 
 # The following function imports summary statistics from a tabix-index TSV file and performs necessary filtering.
-import_eQTLCatalogue <- function(ftp_path, region, selected_molecular_trait_id, column_names, column_types, verbose = TRUE){
+import_eQTLCatalogue <- function(ftp_path, region, selected_molecular_trait_id, column_names, verbose = TRUE){
   if(verbose){
     print(ftp_path)
   }
   
   #Fetch summary statistics with Rsamtools
-  # This has been commented out because this method can not allocate memory with over 10M records
-  # summary_stats = scanTabixDataFrame(tabix_file = ftp_path, param = region, col_names = column_names, col_types = column_types)[[1]] 
-
   tabix_list = Rsamtools::scanTabix(ftp_path, param = region)
   summary_stats <- Map(function(elt) {
     utils::read.csv(textConnection(elt), sep="\t", col.names = col_names_eqtl)
@@ -149,7 +114,7 @@ run_coloc <- function(eqtl_sumstats, gwas_sumstats){
                       varbeta = gwas_sumstats$SE^2, 
                       type = "quant", 
                       snp = gwas_sumstats$id,
-                      MAF = gwas_sumstats$MAF, 
+                      MAF = gwas_sumstats$maf, 
                       N = gwas_sumstats$SS)
   coloc_res = coloc::coloc.abf(dataset1 = eQTL_dataset, dataset2 = gwas_dataset,p1 = 1e-4, p2 = 1e-4, p12 = 1e-5)
   res_formatted = dplyr::as_tibble(t(as.data.frame(coloc_res$summary)))
@@ -170,8 +135,6 @@ splitIntoChunks <- function(chunk_number, n_chunks, n_total){
   return(selected_batch)
 }
 
-col_names_eqtl <- c("molecular_trait_id","chromosome","position","ref","alt","variant","ma_samples","ac","an","maf","pvalue","beta","se","molecular_trait_object_id","gene_id","median_tpm","r2","type","rsid")
-col_types_eqtl <- "ccdcccnnnddddccddcc"
 # Define a function which performs coloc between variant and phenotype in given window around the variant position
 #' @param pair One row of dataframe with [molecular_trait_id,variant,chromosome,position] columns
 #' @param gwas_ss GWAS vcf file. Should have a tabix index file in the same path
@@ -180,7 +143,7 @@ col_types_eqtl <- "ccdcccnnnddddccddcc"
 #'
 #' @return one row of tibble which will be rbinded after apply function finishes the process.
 #' @export
-coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl, col_types_eqtl, gwas_id, qtl_subset){
+coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl, gwas_id, qtl_subset){
   print(pair)
   var_id = as.character(pair["variant"]) %>% trimws()
   var_pos = as.numeric(pair["position"])
@@ -192,13 +155,13 @@ coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl
     strand = "*")
   
   eqtl_ss_df <- import_eQTLCatalogue(ftp_path = eqtl_ss, 
-                                     region =  region_granges, 
+                                     region = region_granges, 
                                      selected_molecular_trait_id = molecular_trait_id, 
-                                     column_names = col_names_eqtl,
-                                     column_types = col_types_eqtl)
+                                     column_names = col_names_eqtl)
   if (is.null(eqtl_ss_df) || nrow(eqtl_ss_df) == 0) {
     return(data.frame())
   }
+  eqtl_maf_df = dplyr::select(eqtl_ss_df, id, maf)
   
   gwas_stats = gwasvcf::query_gwas(gwas_ss, chrompos = paste0(var_chrom, ":", max(0, var_pos - coloc_window), "-", var_pos + coloc_window))
   # return empty dataframe if there is no any variants in the given region of GWAS SS
@@ -210,13 +173,14 @@ coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl
   
   gwas_stats <- gwas_stats %>%
     dplyr::as_tibble() %>%
-    dplyr::transmute(chromosome = seqnames, position = start, AF, ES, SE, LP, SS) %>%
+    dplyr::transmute(chromosome = seqnames, position = start, ES, SE, LP, SS) %>%
     dplyr::mutate(id = paste(chromosome, position, sep = ":")) %>%
-    dplyr::mutate(MAF = pmin(AF, 1-AF)) %>% #Calculate MAF
     dplyr::group_by(id) %>% #Keep bi-alleilic variants
     dplyr::mutate(row_count = n()) %>% 
     dplyr::ungroup() %>% 
-    dplyr::filter(row_count == 1) 
+    dplyr::filter(row_count == 1) %>%
+    dplyr::left_join(eqtl_maf_df, by = "id") %>%
+    dplyr::filter(!is.na(maf))
 
   # return an empty dataframe if GWAS and QTL SummStats does not share any variant.
   if (sum(gwas_stats$id %in% eqtl_ss_df$id) == 0) {
@@ -237,6 +201,10 @@ coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl
 # Read molecular_trait_id variant pairs
 pheno_var_df <- read_tsv(lead_pairs)
 
+#Read column names from the eQTL summary file
+qtl_header = read.table(qtl_sumstats, nrows = 1, header = T, sep = "\t")
+col_names_eqtl <- colnames(qtl_header)
+
 #Split phenotype list into chunks
 chunk_vector = strsplit(chunk, split = " ") %>% unlist() %>% as.numeric()
 chunk_id = chunk_vector[1]
@@ -249,7 +217,6 @@ coloc_results <- do.call("rbind", apply(selected_pairs, 1, coloc_in_region,
                                         eqtl_ss = qtl_sumstats, 
                                         coloc_window = coloc_window, 
                                         col_names_eqtl = col_names_eqtl,
-                                        col_types_eqtl = col_types_eqtl,
                                         gwas_id = gwas_id,
                                         qtl_subset = qtl_subset))
 
