@@ -17,7 +17,7 @@ git clone https://github.com/eQTL-Catalogue/colocalisation.git
   - _hg38_ref_genome = "/gpfs/hpc/projects/genomic_references/annotations/GRCh38/Homo_sapiens.GRCh38.dna.primary_assembly.fa"_<br />  // This is a reference genome. Don't change it if you don't know what you are doing.
   - _outdir = './results_coloc_tx'_<br />  // Output directory of the pipeline. The results will be here
   - _use_permutation = false_<br />  // A flag to inform pipeline if you are using lead_var_pairs (credible sets) to do colocalisation in specific pairs of molecular_trait_id and variant_id. If **true** the 4th column of **qtl_ss_tsv** should be permutation run result file of the qtl_subset. If **false** the same column should be the lead_var_pairs file [see example](https://github.com/eQTL-Catalogue/colocalisation/blob/master/testdata_coloc/lead_pairs_rnaseq_2.tsv)
-  - _cis_window = 200000_<br />  // cis window where you wanna perform colocalisation. defaults is +-200000 basepairs
+  - _cis_window = 200000_<br />  // cis window where you wanna perform colocalisation. The default is +/-200,000 basepairs.
   - _n_batches = 10_<br />  // Number of batches needed to split the lead_var_pairs file in processing. I.E. [] has 42445 pairs in it. so if **n_batches**=10 in each job pipeline will process 4245 pairs.
 
 3. start a screen session
