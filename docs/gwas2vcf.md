@@ -7,7 +7,7 @@ git clone git@github.com:MRCIEU/gwas2vcf.git
 cd gwas2vcf
 ```
 
-### Step 2: Build the singularity container from DockerHub:
+### Step 2: Build the singularity container from Quay.io:
 
 ```bash
 module load singularity/3.5.3
