@@ -1,7 +1,7 @@
-FROM bioconductor/bioconductor_docker:RELEASE_3_11
+FROM nfcore/base
 LABEL authors="Kaur Alasoo" \
       description="Docker image containing all requirements for the eQTL Catalogue colocalisation workflow"
 
-RUN R -e "BiocManager::install(c('dplyr','tidyr','assertthat','devtools','GenomicRanges','readr','coloc','optparse','Rsamtools','readr','stringr'))"
-RUN R -e "devtools::install_github('mrcieu/gwasvcf')"
-
+COPY environment.yml /
+RUN conda env create -f /environment.yml && conda clean -a
+ENV PATH /opt/conda/envs/colocalisation-1.0dev/bin:$PATH
