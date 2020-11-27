@@ -11,7 +11,7 @@ cd gwas2vcf
 
 ```bash
 module load singularity/3.5.3
-singularity build gwas2vcf.img docker://kauralasoo/gwas2vcf:latest
+singularity build gwas2vcf.img docker://quay.io/eqtlcatalogue/gwas2vcf:v20.11.1
 ```
 
 ### Step 3: Run gwas2vcf using the sinularity container
@@ -25,3 +25,5 @@ singularity exec -B /gpfs/:/gpfs/ gwas2vcf.img python main.py\
     --cohort_controls 457526\
     --json params.json
 ```
+
+Example params.json file for the Pan-UKBB data can be found [here](params.json). 
