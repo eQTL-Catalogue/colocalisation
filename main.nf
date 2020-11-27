@@ -38,7 +38,7 @@ process lift_to_GRCh38{
     tag "${gwas_id}"
     //storeDir "/gpfs/hpc/projects/eQTLCatalogue/coloc/GRCh38_conv_GWAS_15Sept2020"
     publishDir "${params.outdir}/GRCh38_conv/", mode: 'copy'
-    container 'eqtlcatalogue/genimpute:v20.06.1'
+    container 'quay.io/eqtlcatalogue/genimpute:v20.06.1'
 
     input:
     tuple val(gwas_id), file(gwas_vcf) from gwas_vcf_ch
@@ -58,7 +58,7 @@ process tabix_index_gwas{
     tag "${gwas_id}"
     //storeDir "/gpfs/hpc/projects/eQTLCatalogue/coloc/GRCh38_conv_GWAS_15Sept2020"
     publishDir "${params.outdir}/GRCh38_conv/", mode: 'copy'
-    container = 'eqtlcatalogue/qtlmap:v20.05.1'
+    container = 'quay.io/eqtlcatalogue/qtlmap:v20.05.1'
 
     input:
     tuple val(gwas_id), file(vcf_GRCh38) from tabix_index_ch
@@ -77,7 +77,7 @@ if (params.use_permutation) {
     process extract_lead_var_pairs{
         tag "${qtl_subset}"
         publishDir "${params.outdir}/leadpairs/", mode: 'copy', pattern: "*.leadpairs.tsv"
-        container = 'eqtlcatalogue/colocalisation:v20.10.1'
+        container = 'quay.io/eqtlcatalogue/colocalisation:v20.10.1'
 
         input:
         tuple val(qtl_subset), file(eqtl_ss), file(eqtl_ss_index), file(perm_res) from extract_lead_var_pairs_ch
@@ -104,7 +104,7 @@ if (params.use_permutation) {
 process run_coloc{
     tag "${gwas_id}_${qtl_subset}"
     // publishDir "${params.outdir}/coloc_results_batch/", mode: 'copy'
-    container 'eqtlcatalogue/colocalisation:v20.10.1'
+    container 'quay.io/eqtlcatalogue/colocalisation:v20.10.1'
 
     input:
     each batch_index from 1..params.n_batches
@@ -132,7 +132,7 @@ process run_coloc{
 
 process merge_coloc_results{
     publishDir "${params.outdir}/coloc_results_merged/${gwas_id}", mode: 'copy'
-    container 'eqtlcatalogue/qtlmap:v20.05.1'
+    container 'quay.io/eqtlcatalogue/qtlmap:v20.05.1'
 
     input:
     tuple gwas_id, gwas_qtl_subset, file(gwas_qtl_subset_coloc_results_batch_files) from batch_files_merge_coloc_results.groupTuple(by: [1, 0], size: params.n_batches, sort: true)
