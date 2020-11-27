@@ -1,6 +1,8 @@
 # eQTL-Catalogue/colocalisation
 **This pipeline runs colocalisation analysis using summary statistics from the eQTL Catalogue (or any summary statistics in the same format) and GWAS summary statistics in VCF format downloaded from the [MRC OpenGWAS database](https://gwas.mrcieu.ac.uk/datasets/).**
 
+Your GWAS summary statistics are not in the VCF format? See [here](docs/gwas2vcf.md) for quick conversion instructions.
+
 
 ### To run in University of Tartu HPC
 
