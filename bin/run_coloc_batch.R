@@ -227,7 +227,7 @@ if (!is.null(output_prefix)) {
 # If there are colocalisation results then write it into the file, if not create an empty file
 if(!is.na(coloc_results) && nrow(coloc_results) > 0){
   message(" ## write colocalisation results to ", file_name )
-  coloc_results = coloc_results %>% select(c("gwas_id", "qtl_subset", "variant", "molecular_trait_id", "chromosome", "position"), everything())
+  coloc_results = coloc_results %>% dplyr::select(c("gwas_id", "qtl_subset", "variant", "molecular_trait_id", "chromosome", "position"), everything())
   utils::write.table(coloc_results, file = file_name, quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
 } else {
   file.create(file_name)
