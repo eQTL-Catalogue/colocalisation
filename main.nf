@@ -77,7 +77,7 @@ if (params.use_permutation) {
     process extract_lead_var_pairs{
         tag "${qtl_subset}"
         publishDir "${params.outdir}/leadpairs/", mode: 'copy', pattern: "*.leadpairs.tsv"
-        container = 'quay.io/eqtlcatalogue/colocalisation:latest'
+        container = 'quay.io/eqtlcatalogue/colocalisation:v20.01.1'
 
         input:
         tuple val(qtl_subset), file(eqtl_ss), file(eqtl_ss_index), file(perm_res) from extract_lead_var_pairs_ch
