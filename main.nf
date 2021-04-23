@@ -104,7 +104,7 @@ if (params.use_permutation) {
 process run_coloc{
     tag "${gwas_id}_${qtl_subset}"
     // publishDir "${params.outdir}/coloc_results_batch/", mode: 'copy'
-    container 'quay.io/eqtlcatalogue/colocalisation:latest'
+    container 'quay.io/eqtlcatalogue/colocalisation:v20.01.1'
 
     input:
     each batch_index from 1..params.n_batches
