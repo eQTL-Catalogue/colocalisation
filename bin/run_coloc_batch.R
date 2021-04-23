@@ -3,7 +3,7 @@ suppressPackageStartupMessages(library("dplyr"))
 suppressPackageStartupMessages(library("readr"))
 suppressPackageStartupMessages(library("coloc"))
 suppressPackageStartupMessages(library("GenomicRanges"))
-suppressPackageStartupMessages(library("Rsamtools"))
+suppressPackageStartupMessages(library("seqminer"))
 suppressPackageStartupMessages(library("optparse"))
 suppressPackageStartupMessages(library("gwasvcf"))
 
@@ -75,23 +75,20 @@ import_eQTLCatalogue <- function(ftp_path, region, selected_molecular_trait_id, 
     print(ftp_path)
   }
   
-  #Fetch summary statistics with Rsamtools
-  tabix_list = Rsamtools::scanTabix(ftp_path, param = region)
-  summary_stats <- Map(function(elt) {
-    utils::read.csv(textConnection(elt), sep="\t", col.names = col_names_eqtl)
-  }, tabix_list)
+  #Fetch summary statistics with seqminer
+  fetch_table = seqminer::tabix.read.table(tabixFile = ftp_path, tabixRange = region, stringsAsFactors = FALSE) %>%
+    dplyr::as_tibble()
+  colnames(fetch_table) = column_names
   
-  summary_stats <- summary_stats[[1]] %>% as.data.frame()
-  
-  if (is.null(summary_stats)) {
+  if (is.null(fetch_table)) {
     return(NULL)
   }
-  summary_stats = summary_stats %>% 
+  summary_stats = fetch_table %>% 
     dplyr::filter(molecular_trait_id == selected_molecular_trait_id)
   
   #Remove rsid duplicates and multi-allelic variant
   summary_stats = dplyr::select(summary_stats, -rsid) %>% 
-    base::unique() %>% #rsid duplicates
+    dplyr::distinct() %>% #rsid duplicates
     dplyr::mutate(id = paste(chromosome, position, sep = ":")) %>% 
     dplyr::group_by(id) %>% 
     dplyr::mutate(row_count = n()) %>% dplyr::ungroup() %>% 
@@ -149,13 +146,12 @@ coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl
   var_pos = as.numeric(pair["position"])
   var_chrom = as.character(pair["chromosome"]) %>% trimws()
   molecular_trait_id = as.character(pair["molecular_trait_id"])
-  region_granges = GenomicRanges::GRanges(
-    seqnames = var_chrom, 
-    ranges = IRanges::IRanges(start = max(0, var_pos - coloc_window), end = var_pos + coloc_window), 
-    strand = "*")
+  
+  #Construct character string for the region
+  region_string = paste0(var_chrom, ":", as.integer(max(0, var_pos - coloc_window)), "-", as.integer(var_pos + coloc_window))
   
   eqtl_ss_df <- import_eQTLCatalogue(ftp_path = eqtl_ss, 
-                                     region = region_granges, 
+                                     region = region_string, 
                                      selected_molecular_trait_id = molecular_trait_id, 
                                      column_names = col_names_eqtl)
   if (is.null(eqtl_ss_df) || nrow(eqtl_ss_df) == 0) {
@@ -163,7 +159,7 @@ coloc_in_region <- function(pair, gwas_ss, eqtl_ss, coloc_window, col_names_eqtl
   }
   eqtl_maf_df = dplyr::select(eqtl_ss_df, id, maf)
   
-  gwas_stats = gwasvcf::query_gwas(gwas_ss, chrompos = paste0(var_chrom, ":", max(0, var_pos - coloc_window), "-", var_pos + coloc_window))
+  gwas_stats = gwasvcf::query_gwas(gwas_ss, chrompos = region_string)
   # return empty dataframe if there is no any variants in the given region of GWAS SS
   if(nrow(gwas_stats) == 0){
     return(data.frame())
@@ -231,7 +227,7 @@ if (!is.null(output_prefix)) {
 # If there are colocalisation results then write it into the file, if not create an empty file
 if(!is.na(coloc_results) && nrow(coloc_results) > 0){
   message(" ## write colocalisation results to ", file_name )
-  coloc_results = coloc_results %>% select(c("gwas_id", "qtl_subset", "variant", "molecular_trait_id", "chromosome", "position"), everything())
+  coloc_results = coloc_results %>% dplyr::select(c("gwas_id", "qtl_subset", "variant", "molecular_trait_id", "chromosome", "position"), everything())
   utils::write.table(coloc_results, file = file_name, quote = FALSE, sep = "\t", row.names = FALSE, col.names = TRUE)
 } else {
   file.create(file_name)
