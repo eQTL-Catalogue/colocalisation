@@ -80,7 +80,7 @@ import_eQTLCatalogue <- function(ftp_path, region, selected_molecular_trait_id, 
     dplyr::as_tibble()
   colnames(fetch_table) = column_names
   
-  if (is.null(fetch_table)) {
+  if (is.null(fetch_table) | nrow(fetch_table) == 0 | ncol(fetch_table) == 0) {
     return(NULL)
   }
   summary_stats = fetch_table %>% 
